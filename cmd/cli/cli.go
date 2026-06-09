@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 
 	"FileSync/internal/comparator"
@@ -15,6 +16,8 @@ import (
 	"FileSync/internal/scanFiles"
 	"FileSync/internal/synchronizer"
 )
+
+const MaxDisplay = 20
 
 func buildComparison(sourceDir string, destDir string) (models.CompareResult, models.DirMetaData, models.DirMetaData, error) {
 	srcScan, err := scanFiles.Scanner(context.Background(), sourceDir)
@@ -27,13 +30,14 @@ func buildComparison(sourceDir string, destDir string) (models.CompareResult, mo
 		return models.CompareResult{}, models.DirMetaData{}, models.DirMetaData{}, err
 	}
 
+	generator := metadata.New(runtime.NumCPU())
 
-	srcFiles, srcMeta, err := metadata.Build(srcScan)
+	srcFiles, srcMeta, err := generator.Build(context.Background(), srcScan)
 	if err != nil {
 		return models.CompareResult{}, models.DirMetaData{}, models.DirMetaData{}, err
 	}
 
-	destFiles, destMeta, err := metadata.Build(destScan)
+	destFiles, destMeta, err := generator.Build(context.Background(), destScan)
 	if err != nil {
 		return models.CompareResult{}, models.DirMetaData{}, models.DirMetaData{}, err
 	}
@@ -65,16 +69,16 @@ func RunList() error {
 		return err
 	}
 
+	if len(pairs) == 0 {
+		fmt.Println("No synchronization pairs found.")
+		return nil
+	}
+
 	fmt.Println("ID | SOURCE | DESTINATION")
 	fmt.Println("----------------------------")
-        
 
 	for _, pair := range pairs {
-		fmt.Printf("%d | %s -> %s\n",
-			pair.ID,
-			pair.Source,
-			pair.Destination,
-		)
+		fmt.Printf("%d | %s -> %s\n", pair.ID, pair.Source, pair.Destination)
 	}
 
 	return nil
@@ -161,6 +165,11 @@ func RunCompare() error {
 
 	fmt.Println("\n------CHANGES-------")
 
+	if len(result.Changes) == 0 {
+		fmt.Println("No changes detected.")
+		return nil
+	}
+
 	for _, change := range result.Changes {
 		fmt.Printf("[%s] %s\n", change.Type, change.RelativePath)
 	}
@@ -193,6 +202,11 @@ func RunChanges() error {
 
 	fmt.Println("------CHANGES------")
 
+	if len(result.Changes) == 0 {
+		fmt.Println("No changes detected.")
+		return nil
+	}
+
 	for _, change := range result.Changes {
 		fmt.Printf("[%s] %s\n", change.Type, change.RelativePath)
 	}
@@ -221,6 +235,11 @@ func RunSync() error {
 	result, _, _, err := buildComparison(pair.Source, pair.Destination)
 	if err != nil {
 		return err
+	}
+
+	if len(result.Changes) == 0 {
+		fmt.Println("Already synchronized.")
+		return nil
 	}
 
 	syncReport, err := synchronizer.Sync(pair.Source, pair.Destination, result)
@@ -275,25 +294,64 @@ func RunReport() error {
 		return err
 	}
 
-	fmt.Println("------SYNC REPORT------")
+	duration := reportData.EndTime.Sub(reportData.StartTime)
 
+	fmt.Println("------SYNC REPORT------")
+	fmt.Printf("Start Time   : %v\n", reportData.StartTime)
+	fmt.Printf("End Time     : %v\n", reportData.EndTime)
+	fmt.Printf("Duration     : %v\n", duration)
 	fmt.Printf("Added        : %d\n", reportData.Added)
 	fmt.Printf("Modified     : %d\n", reportData.Modified)
 	fmt.Printf("Deleted      : %d\n", reportData.Deleted)
 	fmt.Printf("Bytes Copied : %d\n", reportData.BytesCopied)
 
-	fmt.Println("\n------Added Files------")
-	for _, file := range reportData.AddedFiles {
+	fmt.Printf("\n------Added Files (%d)------\n", len(reportData.AddedFiles))
+
+  if len(reportData.AddedFiles) == 0 {
+	fmt.Println("No files are added.")
+}
+
+
+
+	limit := min(MaxDisplay, len(reportData.AddedFiles))
+
+	if len(reportData.AddedFiles) > MaxDisplay {
+		fmt.Printf("Showing first %d files...\n", MaxDisplay)
+	}
+
+	for _, file := range reportData.AddedFiles[:limit] {
 		fmt.Println(file)
 	}
 
-	fmt.Println("\n-------Modified Files-------")
-	for _, file := range reportData.ModifiedFiles {
+	fmt.Printf("\n------Modified Files (%d)------\n", len(reportData.ModifiedFiles))
+
+	if len(reportData.ModifiedFiles) == 0 {
+	fmt.Println("No files are modified.")
+}
+
+	limit1 := min(MaxDisplay, len(reportData.ModifiedFiles))
+
+	if len(reportData.ModifiedFiles) > MaxDisplay {
+		fmt.Printf("Showing first %d files...\n", MaxDisplay)
+	}
+
+	for _, file := range reportData.ModifiedFiles[:limit1] {
 		fmt.Println(file)
 	}
 
-	fmt.Println("\n-------Deleted Files--------")
-	for _, file := range reportData.DeletedFiles {
+	fmt.Printf("\n------Deleted Files (%d)------\n", 	len(reportData.DeletedFiles))
+
+	if len(reportData.DeletedFiles) == 0 {
+	fmt.Println("No files are deleted.")
+}
+
+	limit2 := min(MaxDisplay, len(reportData.DeletedFiles))
+
+	if len(reportData.DeletedFiles) > MaxDisplay {
+		fmt.Printf("Showing first %d files...\n", MaxDisplay)
+	}
+
+	for _, file := range reportData.DeletedFiles[:limit2] {
 		fmt.Println(file)
 	}
 
@@ -334,9 +392,9 @@ func RunScanner() error {
 		return err
 	}
 	fmt.Printf("\n------DESTINATION------\n")
-	fmt.Printf("Root       : %s\n", sourceDir)
-	fmt.Printf("Files      : %d\n", srcScan.FilesCount)
-	fmt.Printf("Directories: %d\n\n", srcScan.DirCount)
+	fmt.Printf("Root       : %s\n", destDir)
+	fmt.Printf("Files      : %d\n", destScan.FilesCount)
+	fmt.Printf("Directories: %d\n\n", destScan.DirCount)
 
 	for _, file := range destScan.Files {
 		fmt.Println(file)

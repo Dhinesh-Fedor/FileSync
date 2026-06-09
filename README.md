@@ -1,18 +1,19 @@
 # FileSync
 
-A file synchronization utility written in Go that compares directories using metadata and SHA256 hashing, detects filesystem changes, and synchronizes destination directories with source directories. 
+A file synchronization utility written in Go that compares directories using metadata and SHA256 hashing, detects filesystem changes, and synchronizes destination directories with source directories.
 
 FileSync was built to explore filesystem traversal, concurrent metadata processing, change detection, synchronization workflows, and command-line application design.
 
 ## Overview
 
 FileSync maintains synchronization pairs consisting of a source directory and a destination directory. The application can:
-* Register synchronization pairs
-* Scan directory structures
-* Generate file metadata
-* Detect added, modified, and deleted files
-* Synchronize destination directories
-* Generate synchronization reports
+
+- Register synchronization pairs
+- Scan directory structures
+- Generate file metadata
+- Detect added, modified, and deleted files
+- Synchronize destination directories
+- Generate synchronization reports
 
 The synchronization process follows a clear pipeline:
 
@@ -38,41 +39,51 @@ Report Generation
 ## Features
 
 ### Pair Management
+
 Manage reusable synchronization pairs. Pairs are stored locally under `configs/pairs.json`.
 
 ### Directory Scanner
-Recursively traverses directory structures while collecting relative file paths, file counts, and directory counts. 
+
+Recursively traverses directory structures while collecting relative file paths, file counts, and directory counts.
+
 > **Note:** The scanner ignores symbolic links and non-regular files.
 
 ### Metadata Generation
+
 For every discovered file, FileSync concurrently collects:
-* Relative path
-* Absolute path
-* File size
-* Last modification time
-* SHA256 hash
+
+- Relative path
+- Absolute path
+- File size
+- Last modification time
+- SHA256 hash
 
 Metadata generation is performed concurrently using worker pools, channels, goroutines, and context cancellation to allow large directory trees to be processed efficiently.
 
 ### SHA256-Based Change Detection
+
 FileSync determines whether files have changed using file size and SHA256 hash comparisons. Files are considered modified when the size differs **OR** the SHA256 differs. This prevents false positives caused by timestamp-only comparisons.
 
 ### Comparison Engine
+
 The comparison engine categorizes files into the following states:
 
-| Type | Description |
-| :--- | :--- |
-| **Added** | Exists in source but not destination |
+| Type         | Description                                  |
+| :----------- | :------------------------------------------- |
+| **Added**    | Exists in source but not destination         |
 | **Modified** | Exists in both locations but content differs |
-| **Deleted** | Exists in destination but not source |
+| **Deleted**  | Exists in destination but not source         |
 
 ### Synchronization Engine
+
 The engine applies detected changes to the destination:
-* **Added Files:** Copied from Source -> Destination.
-* **Modified Files:** Overwritten from Source -> Destination.
-* **Deleted Files:** Removed from the Destination.
+
+- **Added Files:** Copied from Source -> Destination.
+- **Modified Files:** Overwritten from Source -> Destination.
+- **Deleted Files:** Removed from the Destination.
 
 ### Report Generation
+
 Each synchronization operation generates a report containing added/modified/deleted file counts, bytes copied, start/end timestamps, and lists of affected files. Reports are stored under `reports/pair-<id>.json`.
 
 ## Architecture
@@ -101,19 +112,16 @@ FileSync
 ├── cmd/
 │   └── cli/
 │
-├── configs/
 │
 ├── internal/
 │   ├── comparator/
-│   ├── metadataV1/
-│   ├── metadataV2/
+│   ├── metadata/
 │   ├── models/
 │   ├── pairmanager/
 │   ├── report/
 │   ├── scanFiles/
 │   └── synchronizer/
 │
-├── reports/
 │
 ├── utils/
 │   └── hash/
@@ -126,47 +134,56 @@ FileSync
 ## Commands
 
 **Add Pair**
+
 ```bash
 fs add <source> <destination>
 # Example: fs add /tmp/src /tmp/dst
 ```
 
 **List Pairs**
+
 ```bash
 fs list
 ```
 
 **Pair Details**
+
 ```bash
 fs details <pair-id>
 ```
 
 **Scan Directories**
+
 ```bash
 fs scan <source> <destination>
 ```
 
 **Compare Directories**
+
 ```bash
 fs compare <source> <destination>
 ```
 
 **View Changes**
+
 ```bash
 fs changes <pair-id>
 ```
 
 **Synchronize**
+
 ```bash
 fs sync <pair-id>
 ```
 
 **View Report**
+
 ```bash
 fs report <pair-id>
 ```
 
 **Delete Pair**
+
 ```bash
 fs delete <pair-id>
 ```
@@ -189,6 +206,7 @@ fs report 1
 ```
 
 **Expected Synchronization Result:**
+
 ```text
 Source
 └── a.txt
@@ -200,10 +218,41 @@ Destination
 ## Testing
 
 Run all tests:
+
 ```bash
 go test ./...
 ```
-*Current test coverage includes: Scanner, Metadata generation, SHA256 hashing, Comparator, Pair management, Synchronization engine, and Report generation.*
+
+_Current test coverage includes: Scanner, Metadata generation, SHA256 hashing, Comparator, Pair management, Synchronization engine, and Report generation._
+
+## v1.1.0 - Metadata Update & Stability Release
+
+### Metadata Updates
+
+- Replaced sequential metadata generation with a worker-pool architecture
+- Concurrent file hashing and metadata extraction
+- Configurable worker count
+- Context-aware processing and cancellation support
+- Improved performance on large directory trees
+
+### Stability Improvements
+
+- Hidden files and directories are ignored automatically
+- Added report timing information (start time, end time, duration)
+- Improved synchronization summaries and CLI messages
+
+### Fixes
+
+- Fixed pair ID reuse after deletion
+- Fixed scanner destination statistics output
+- Better handling of already synchronized directories 
+
+### Next
+
+- TCP-based remote synchronization (v2.0.0)
+- Metadata exchange over network
+- File transfer protocol
+- Remote synchronization support
 
 ## License
 

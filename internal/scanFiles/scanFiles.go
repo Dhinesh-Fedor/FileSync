@@ -4,54 +4,76 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"FileSync/internal/models"
 )
 
+func shouldIgnore(name string) bool {
+
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+
+	return false
+}
+
 func Scanner(ctx context.Context, dirName string) (models.ScannedFiles, error) {
-	result := models.ScannedFiles{Root: dirName}
+
+	result := models.ScannedFiles{
+		Root: dirName,
+	}
+
 	root := filepath.Clean(dirName)
+
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+
 		if err != nil {
 			return err
 		}
-    
-		// exits the scanner if there is any interruption ( basically handles interruption, meh...)
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
-		// Skip the root
 		if path == root {
 			return nil
 		}
-		
-    // count dirs
+
+		if shouldIgnore(d.Name()) {
+
+			if d.IsDir() {
+				return filepath.SkipDir
+			} 
+
+
+			return nil
+		}
+
 		if d.Type().IsDir() {
 			result.DirCount++
 			return nil
 		}
 
-		// Handles Symlink files - ignores them
 		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
 
-    // Skip irregular dir entries 
 		if !d.Type().IsRegular() {
 			return nil
 		}
 
-	  //if it is a file then adds
-		// its relative path to the files array.
 		file, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
+
 		result.Files = append(result.Files, filepath.ToSlash(file))
-    result.FilesCount++
+
+		result.FilesCount++
+
 		return nil
 	})
 

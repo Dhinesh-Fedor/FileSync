@@ -47,7 +47,6 @@ func List() ([]models.SyncPair, error) {
 	return Load()
 }
 
-
 func Add(source string, destination string) (models.SyncPair, error) {
 
 	pairs, err := Load()
@@ -55,14 +54,16 @@ func Add(source string, destination string) (models.SyncPair, error) {
 		return models.SyncPair{}, err
 	}
 
-	id := 1
+	maxID := 0
 
-	if len(pairs) > 0 {
-		id = pairs[len(pairs)-1].ID + 1
+	for _, pair := range pairs {
+		if pair.ID > maxID {
+			maxID = pair.ID
+		}
 	}
 
 	pair := models.SyncPair{
-		ID:          id,
+		ID:          maxID + 1,
 		Source:      source,
 		Destination: destination,
 		CreatedAt:   time.Now(),
