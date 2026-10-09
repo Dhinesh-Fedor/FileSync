@@ -1,0 +1,7 @@
+.git
+.gitignore
+storage
+server_data
+bin
+*.test
+*.out

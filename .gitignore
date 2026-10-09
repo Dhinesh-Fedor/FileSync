@@ -32,8 +32,11 @@ go.work.sum
 # .vscode/
 
 
-# Generated Reports
-reports/
+# Local build output
+/FileSync
+/bin/
 
-# Runtime configs
-configs/
+# Runtime storage
+/server_data/
+storage/*
+!storage/.gitignore

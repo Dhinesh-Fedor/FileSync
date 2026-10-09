@@ -3,11 +3,12 @@ package pairmanager
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 
 	"FileSync/internal/models"
 )
 
-const ConfigFile = "configs/pairs.json"
+const ConfigFile = "storage/client/metadata/pairs.json"
 
 func Load() ([]models.SyncPair, error) {
 
@@ -29,7 +30,7 @@ func Load() ([]models.SyncPair, error) {
 
 func Save(pairs []models.SyncPair) error {
 
-	if err := os.MkdirAll("configs", 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ConfigFile), 0755); err != nil {
 		return err
 	}
 

@@ -4,12 +4,23 @@ import (
 	"os"
 	"testing"
 
+	"FileSync/internal/models"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddPair(t *testing.T) {
+	root := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
 
-	os.Remove(ConfigFile)
+	_ = os.Remove(ConfigFile)
 
 	pair, err := Add(
 		"/tmp/source",
@@ -24,15 +35,25 @@ func TestAddPair(t *testing.T) {
 }
 
 func TestGetPair(t *testing.T) {
+	root := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
 
-	os.Remove(ConfigFile)
+	_ = os.Remove(ConfigFile)
 
 	pair, _ := Add(
 		"/tmp/source",
 		"/tmp/destination",
 	)
 
-	found, err := Get(pair.ID)
+	var found *models.SyncPair
+	found, err = Get(pair.ID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, found)
@@ -41,19 +62,29 @@ func TestGetPair(t *testing.T) {
 }
 
 func TestDeletePair(t *testing.T) {
+	root := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
 
-	os.Remove(ConfigFile)
+	_ = os.Remove(ConfigFile)
 
 	pair, _ := Add(
 		"/tmp/source",
 		"/tmp/destination",
 	)
 
-	err := Delete(pair.ID)
+	err = Delete(pair.ID)
 
 	assert.NoError(t, err)
 
-	found, err := Get(pair.ID)
+	var found *models.SyncPair
+	found, err = Get(pair.ID)
 
 	assert.NoError(t, err)
 	assert.Nil(t, found)

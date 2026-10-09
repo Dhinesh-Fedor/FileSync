@@ -1,0 +1,15 @@
+services:
+    filesync-server:
+        build: .
+        ports:
+            - "8080:8080"
+        environment:
+            FILESYNC_SERVER_ADDR: ":8080"
+            FILESYNC_SERVER_STORAGE: /var/lib/filesync
+            FILESYNC_AUTH_TOKEN: ${FILESYNC_AUTH_TOKEN:?set FILESYNC_AUTH_TOKEN}
+        volumes:
+            - filesync-data:/var/lib/filesync
+        restart: unless-stopped
+
+volumes:
+    filesync-data:
